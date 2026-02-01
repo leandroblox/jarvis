@@ -1,0 +1,39 @@
+name: Build Installer
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    # 1. Prepara o Node.js Portátil para ser empacotado
+    - name: Download Portable Node.js
+      run: |
+        Invoke-WebRequest -Uri "https://nodejs.org/dist/v20.11.0/node-v20.11.0-win-x64.zip" -OutFile "node.zip"
+        Expand-Archive -Path "node.zip" -DestinationPath "bin_temp"
+        Move-Item -Path "bin_temp\node-v20.11.0-win-x64" -Destination "bin"
+        Remove-Item "node.zip"
+        Remove-Item "bin_temp" -Recurse
+
+    # 2. Instala dependências do projeto (para o código funcionar)
+    - name: Install Project Dependencies
+      run: npm install --omit=dev
+
+    # 3. Compila o Instalador usando Inno Setup
+    - name: Build Installer
+      uses: Minionguyjosh/inno-setup-action@v1.2.2
+      with:
+        path: setup.iss
+
+    # 4. Upload do Artefato (O .exe final)
+    - name: Upload Installer
+      uses: actions/upload-artifact@v4
+      with:
+        name: JarvisSetup
+        path: Output/JarvisSetup.exe
